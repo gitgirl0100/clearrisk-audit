@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClearRisk Audit</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 60px;
+        }
+
+        .container {
+            width: 600px;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #222;
+            border-radius: 8px;
+        }
+
+        .high {
+            color: #ff4d4d;
+        }
+
+        .moderate {
+            color: #ffa500;
+        }
+
+        .low {
+            color: #4CAF50;
+        }
+
+        .extreme {
+            color: #ff0000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>ClearRisk Audit</h1>
+
+        <label for="addressInput">Enter Token Contract Address:</label>
+        <input
+            id="addressInput"
+            type="text"
+            placeholder="0x1234567890123456789012345678901234567890"
+        />
+
+        <button onclick="evaluateRisk()">Evaluate Risk</button>
+
+        <div id="output" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        async function evaluateRisk() {
+
+            const address = document.getElementById("addressInput").value.trim();
+            const output = document.getElementById("output");
+
+            output.style.display = "block";
+            output.innerHTML = "Processing...";
+
+            try {
+
+                const response = await fetch("http://localhost:5000/api/evaluate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        address: address
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    output.innerHTML = "<strong>Error:</strong> " + data.error;
+                    return;
+                }
+
+                const tierClass = data.report.tier.toLowerCase();
+
+                output.innerHTML = `
+                    <h3>Risk Score: ${data.report.finalScore}</h3>
+                    <h4 class="${tierClass}">${data.report.tier} Risk</h4>
+
+                    <p><strong>Ownership Risk:</strong> ${data.report.breakdown.ownershipRisk}</p>
+                    <p><strong>Liquidity Risk:</strong> ${data.report.breakdown.liquidityRisk}</p>
+                    <p><strong>Distribution Risk:</strong> ${data.report.breakdown.distributionRisk}</p>
+                    <p><strong>Code Transparency Risk:</strong> ${data.report.breakdown.codeTransparencyRisk}</p>
+                    <p><strong>Activity Risk:</strong> ${data.report.breakdown.activityRisk}</p>
+
+                    <hr>
+                    <p><strong>Report Hash:</strong><br>${data.reportHash}</p>
+                `;
+
+            } catch (error) {
+                output.innerHTML = "Server connection error. Make sure backend is running.";
+            }
+        }
+    </script>
+</body>
+</html>
