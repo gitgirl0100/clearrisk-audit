@@ -17,8 +17,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors();
 
-// Optional root route so browser doesn’t show 404
-app.MapGet("/", () => "ClearRisk Audit API is running. Use POST /api/evaluate");
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 
 // --- Helpers ---
 static string GetTier(double score)
