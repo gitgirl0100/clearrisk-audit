@@ -101,53 +101,55 @@
     </div>
 
     <script>
-        async function evaluateRisk() {
+    async function evaluateRisk() {
+        const address = document.getElementById("addressInput").value.trim();
+        const output = document.getElementById("output");
 
-            const address = document.getElementById("addressInput").value.trim();
-            const output = document.getElementById("output");
+        output.style.display = "block";
+        output.innerHTML = "Processing...";
 
-            output.style.display = "block";
-            output.innerHTML = "Processing...";
-
-            try {
-
-                const response = await fetch("http://localhost:5000/api/evaluate", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        address: address
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    output.innerHTML = "<strong>Error:</strong> " + data.error;
-                    return;
-                }
-
-                const tierClass = data.report.tier.toLowerCase();
-
-                output.innerHTML = `
-                    <h3>Risk Score: ${data.report.finalScore}</h3>
-                    <h4 class="${tierClass}">${data.report.tier} Risk</h4>
-
-                    <p><strong>Ownership Risk:</strong> ${data.report.breakdown.ownershipRisk}</p>
-                    <p><strong>Liquidity Risk:</strong> ${data.report.breakdown.liquidityRisk}</p>
-                    <p><strong>Distribution Risk:</strong> ${data.report.breakdown.distributionRisk}</p>
-                    <p><strong>Code Transparency Risk:</strong> ${data.report.breakdown.codeTransparencyRisk}</p>
-                    <p><strong>Activity Risk:</strong> ${data.report.breakdown.activityRisk}</p>
-
-                    <hr>
-                    <p><strong>Report Hash:</strong><br>${data.reportHash}</p>
-                `;
-
-            } catch (error) {
-                output.innerHTML = "Server connection error. Make sure backend is running.";
-            }
+        if (!address) {
+            output.innerHTML = "<strong>Error:</strong> Please enter a contract address before submitting.";
+            return;
         }
-    </script>
+
+        try {
+            const response = await fetch("http://localhost:5000/api/evaluate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    address: address
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.innerHTML = "<strong>Error:</strong> " + data.error;
+                return;
+            }
+
+            const tierClass = data.report.tier.toLowerCase();
+
+            output.innerHTML = `
+                <h3>Risk Score: ${data.report.finalScore}</h3>
+                <h4 class="${tierClass}">${data.report.tier} Risk</h4>
+
+                <p><strong>Ownership Risk:</strong> ${data.report.breakdown.ownershipRisk}</p>
+                <p><strong>Liquidity Risk:</strong> ${data.report.breakdown.liquidityRisk}</p>
+                <p><strong>Distribution Risk:</strong> ${data.report.breakdown.distributionRisk}</p>
+                <p><strong>Code Transparency Risk:</strong> ${data.report.breakdown.codeTransparencyRisk}</p>
+                <p><strong>Activity Risk:</strong> ${data.report.breakdown.activityRisk}</p>
+
+                <hr>
+                <p><strong>Report Hash:</strong><br>${data.reportHash}</p>
+            `;
+        } catch (error) {
+            output.innerHTML = "<strong>Error:</strong> Server connection error. Make sure the backend is running.";
+        }
+    }
+</script>
 </body>
 </html>
