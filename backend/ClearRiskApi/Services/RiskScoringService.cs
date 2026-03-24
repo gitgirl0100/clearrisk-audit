@@ -7,12 +7,14 @@ namespace ClearRiskApi.Services
     {
         public RiskEvaluationResult Evaluate(string contractAddress)
         {
-            // Deterministic mock values for now
-            double ownershipRisk = 0.40;
-            double liquidityRisk = 0.55;
-            double distributionRisk = 0.35;
-            double codeTransparencyRisk = 0.20;
-            double activityRisk = 0.30;
+            int seed = GetDeterministicSeed(contractAddress);
+            Random random = new Random(seed);
+
+            double ownershipRisk = NextRiskValue(random);
+            double liquidityRisk = NextRiskValue(random);
+            double distributionRisk = NextRiskValue(random);
+            double codeTransparencyRisk = NextRiskValue(random);
+            double activityRisk = NextRiskValue(random);
 
             double finalScore =
                 ((0.25 * ownershipRisk) +
@@ -48,6 +50,19 @@ namespace ClearRiskApi.Services
                 Breakdown = breakdown,
                 ReportHash = reportHash
             };
+        }
+
+        private static int GetDeterministicSeed(string contractAddress)
+        {
+            using SHA256 sha256 = SHA256.Create();
+            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(contractAddress));
+
+            return BitConverter.ToInt32(hashBytes, 0);
+        }
+
+        private static double NextRiskValue(Random random)
+        {
+            return Math.Round(random.NextDouble(), 2);
         }
 
         private static string GenerateReportHash(
