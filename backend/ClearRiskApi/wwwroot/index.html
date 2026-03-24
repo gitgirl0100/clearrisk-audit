@@ -15,6 +15,7 @@
             min-height: 100vh;
             margin: 0;
             padding-top: 60px;
+            padding-bottom: 60px;
         }
 
         .container {
@@ -22,7 +23,7 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-            width: 620px;
+            width: 720px;
             max-width: 90%;
         }
 
@@ -30,6 +31,10 @@
             text-align: center;
             margin-bottom: 35px;
             font-size: 2.2rem;
+        }
+
+        h2, h3 {
+            margin-top: 0;
         }
 
         label {
@@ -66,22 +71,20 @@
         }
 
         .result,
-        .error {
+        .error,
+        .history {
             background: #202027;
             padding: 16px;
             border-radius: 8px;
-            margin-top: 12px;
+            margin-top: 16px;
         }
 
         .error {
             color: #ffb3b3;
         }
 
-        .result h2 {
-            margin-top: 0;
-        }
-
-        .result p {
+        .result p,
+        .history p {
             margin: 8px 0;
             word-break: break-word;
         }
@@ -92,6 +95,40 @@
 
         li {
             margin-bottom: 6px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 12px;
+        }
+
+        .history-card {
+            background: #2a2a33;
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .history-card p {
+            margin: 6px 0;
+            font-size: 0.96rem;
+        }
+
+        .empty-history {
+            color: #cfcfcf;
+            margin-top: 10px;
+        }
+
+        .secondary-button {
+            background-color: #3b82f6;
+            color: white;
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+
+        .secondary-button:hover {
+            background-color: #2563eb;
         }
     </style>
 </head>
@@ -109,6 +146,13 @@
         <button onclick="evaluateRisk()">Evaluate Risk</button>
 
         <div id="message"></div>
+
+        <div class="history">
+            <h2>Report History</h2>
+            <p>Previously saved audit reports are listed below.</p>
+            <button class="secondary-button" onclick="loadReportHistory()">Refresh Report History</button>
+            <div id="historyContainer" class="history-list"></div>
+        </div>
     </div>
 
     <script>
@@ -146,7 +190,7 @@
                         <p><strong>Final Score:</strong> ${data.finalScore}</p>
                         <p><strong>Risk Tier:</strong> ${data.riskTier}</p>
                         <p><strong>Report Hash:</strong> ${data.reportHash}</p>
-                        <p><strong>Created At:</strong> ${data.createdAt}</p>
+                        <p><strong>Created At:</strong> ${formatDate(data.createdAt)}</p>
                         <p><strong>Blockchain Logged:</strong> ${data.blockchainLogged}</p>
 
                         <h3>Breakdown</h3>
@@ -159,6 +203,8 @@
                         </ul>
                     </div>
                 `;
+
+                await loadReportHistory();
             } catch (error) {
                 messageDiv.innerHTML = `
                     <div class="error">
@@ -167,6 +213,59 @@
                 `;
             }
         }
+
+        async function loadReportHistory() {
+            const historyContainer = document.getElementById("historyContainer");
+
+            historyContainer.innerHTML = "<p class='empty-history'>Loading report history...</p>";
+
+            try {
+                const response = await fetch("/api/reports");
+                const reports = await response.json();
+
+                if (!response.ok) {
+                    historyContainer.innerHTML = `
+                        <p class="empty-history">Unable to load report history.</p>
+                    `;
+                    return;
+                }
+
+                if (!reports || reports.length === 0) {
+                    historyContainer.innerHTML = `
+                        <p class="empty-history">No saved reports found yet.</p>
+                    `;
+                    return;
+                }
+
+                historyContainer.innerHTML = reports.map(report => `
+                    <div class="history-card">
+                        <p><strong>Audit ID:</strong> ${report.id}</p>
+                        <p><strong>Contract Address:</strong> ${report.contractAddress}</p>
+                        <p><strong>Final Score:</strong> ${report.finalScore}</p>
+                        <p><strong>Risk Tier:</strong> ${report.riskTier}</p>
+                        <p><strong>Report Hash:</strong> ${report.reportHash}</p>
+                        <p><strong>Created At:</strong> ${formatDate(report.createdAt)}</p>
+                        <p><strong>Blockchain Logged:</strong> ${report.blockchainLogged}</p>
+                    </div>
+                `).join("");
+            } catch (error) {
+                historyContainer.innerHTML = `
+                    <p class="empty-history">Server connection error while loading report history.</p>
+                `;
+            }
+        }
+
+        function formatDate(dateValue) {
+            const date = new Date(dateValue);
+
+            if (isNaN(date.getTime())) {
+                return dateValue;
+            }
+
+            return date.toLocaleString();
+        }
+
+        loadReportHistory();
     </script>
 </body>
 </html>
