@@ -1,60 +1,91 @@
-namespace ClearRiskApi.Services;
-
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
-public class RiskScoringService
+namespace ClearRiskApi.Services
 {
-public object Evaluate(string address)
-{
-double O = 0.8;
-double L = 0.6;
-double D = 0.7;
-double C = 0.4;
-double A = 0.5;
-
-    var finalScore = Math.Round((0.25 * O + 0.30 * L + 0.20 * D + 0.15 * C + 0.10 * A) * 100, 2);
-    var tier = GetTier(finalScore);
-
-    var report = new
+    public class RiskScoringService
     {
-        tokenAddress = address,
-        finalScore,
-        tier,
-        breakdown = new
+        public RiskEvaluationResult Evaluate(string contractAddress)
         {
-            ownershipRisk = O,
-            liquidityRisk = L,
-            distributionRisk = D,
-            codeTransparencyRisk = C,
-            activityRisk = A
+            // Deterministic mock values for now
+            double ownershipRisk = 0.40;
+            double liquidityRisk = 0.55;
+            double distributionRisk = 0.35;
+            double codeTransparencyRisk = 0.20;
+            double activityRisk = 0.30;
+
+            double finalScore =
+                ((0.25 * ownershipRisk) +
+                 (0.30 * liquidityRisk) +
+                 (0.20 * distributionRisk) +
+                 (0.15 * codeTransparencyRisk) +
+                 (0.10 * activityRisk)) * 100;
+
+            finalScore = Math.Round(finalScore, 2);
+
+            string riskTier = finalScore switch
+            {
+                < 30 => "Low",
+                < 60 => "Moderate",
+                _ => "High"
+            };
+
+            var breakdown = new RiskBreakdown
+            {
+                OwnershipRisk = ownershipRisk,
+                LiquidityRisk = liquidityRisk,
+                DistributionRisk = distributionRisk,
+                CodeTransparencyRisk = codeTransparencyRisk,
+                ActivityRisk = activityRisk
+            };
+
+            string reportHash = GenerateReportHash(contractAddress, finalScore, riskTier, breakdown);
+
+            return new RiskEvaluationResult
+            {
+                FinalScore = finalScore,
+                RiskTier = riskTier,
+                Breakdown = breakdown,
+                ReportHash = reportHash
+            };
         }
-    };
 
-    var reportHash = HashSha256(report);
+        private static string GenerateReportHash(
+            string contractAddress,
+            double finalScore,
+            string riskTier,
+            RiskBreakdown breakdown)
+        {
+            string rawReport =
+                $"ContractAddress:{contractAddress}|" +
+                $"FinalScore:{finalScore}|" +
+                $"RiskTier:{riskTier}|" +
+                $"OwnershipRisk:{breakdown.OwnershipRisk}|" +
+                $"LiquidityRisk:{breakdown.LiquidityRisk}|" +
+                $"DistributionRisk:{breakdown.DistributionRisk}|" +
+                $"CodeTransparencyRisk:{breakdown.CodeTransparencyRisk}|" +
+                $"ActivityRisk:{breakdown.ActivityRisk}";
 
-    return new
+            using SHA256 sha256 = SHA256.Create();
+            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawReport));
+            return Convert.ToHexString(hashBytes).ToLower();
+        }
+    }
+
+    public class RiskEvaluationResult
     {
-        report,
-        reportHash
-    };
-}
+        public double FinalScore { get; set; }
+        public string RiskTier { get; set; } = string.Empty;
+        public RiskBreakdown Breakdown { get; set; } = new();
+        public string ReportHash { get; set; } = string.Empty;
+    }
 
-private static string GetTier(double score)
-{
-    if (score >= 76) return "Extreme";
-    if (score >= 51) return "High";
-    if (score >= 26) return "Moderate";
-    return "Low";
-}
-
-private static string HashSha256(object obj)
-{
-    var json = JsonSerializer.Serialize(obj);
-    using var sha = SHA256.Create();
-    var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(json));
-    return Convert.ToHexString(bytes).ToLowerInvariant();
-}
-
+    public class RiskBreakdown
+    {
+        public double OwnershipRisk { get; set; }
+        public double LiquidityRisk { get; set; }
+        public double DistributionRisk { get; set; }
+        public double CodeTransparencyRisk { get; set; }
+        public double ActivityRisk { get; set; }
+    }
 }
