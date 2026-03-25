@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<RiskScoringService>();
+builder.Services.AddHttpClient<BlockchainValidationService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=clearrisk.db"));
@@ -72,13 +73,36 @@ static bool IsValidEthereumAddress(string address, out string errorMessage)
     return true;
 }
 
-app.MapPost("/api/evaluate", async (EvaluateRequest request, RiskScoringService scoringService, AppDbContext db) =>
+app.MapPost("/api/evaluate", async (
+    EvaluateRequest request,
+    RiskScoringService scoringService,
+    BlockchainValidationService blockchainValidationService,
+    AppDbContext db) =>
 {
     if (!IsValidEthereumAddress(request.ContractAddress, out var validationError))
     {
         return Results.BadRequest(new
         {
             error = validationError
+        });
+    }
+
+    var blockchainValidation = await blockchainValidationService
+        .ValidateContractExistsAsync(request.ContractAddress);
+
+    if (!blockchainValidation.IsSuccess)
+    {
+    return Results.Json(new
+    {
+        error = blockchainValidation.ErrorMessage ?? "Blockchain validation service is unavailable."
+    }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    if (!blockchainValidation.ContractExists)
+    {
+        return Results.BadRequest(new
+        {
+            error = blockchainValidation.ErrorMessage
         });
     }
 
