@@ -119,17 +119,39 @@
             color: #cfcfcf;
             margin-top: 10px;
         }
-
+        .primary-button {
+            width: auto;              /* stop full width */
+            display: block;
+            margin: 0 auto 22px auto; /* center */
+            padding: 12px 24px;       /* proper button feel */
+            font-size: 1.1rem;
+            border-radius: 8px;
+        }
         .secondary-button {
             background-color: #3b82f6;
             color: white;
             margin-top: 8px;
             margin-bottom: 0;
-        }
 
+            width: auto;              /* overrides full-width */
+            padding: 8px 14px;        /* smaller button */
+            font-size: 0.9rem;        /* slightly smaller text */
+            display: inline-block;    /* prevents full stretch */
+
+            border-radius: 6px;       /* small upgrade */
+            cursor: pointer;          /* small upgrade */
+        }
         .secondary-button:hover {
             background-color: #2563eb;
         }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #cfcfcf;
+            text-align: center;
+            line-height: 1.5;
+}
     </style>
 </head>
 <body>
@@ -143,16 +165,88 @@
             placeholder="0x1234567890abcdef1234567890abcdef12345678"
         />
 
-        <button onclick="evaluateRisk()">Evaluate Risk</button>
+        <button 
+    class="primary-button"
+    onclick="evaluateRisk()" 
+    aria-label="Evaluate smart contract risk"
+>
+    Evaluate Risk
+</button>
 
         <div id="message"></div>
 
         <div class="history">
-            <h2>Report History</h2>
-            <p>Previously saved audit reports are listed below.</p>
-            <button class="secondary-button" onclick="loadReportHistory()">Refresh Report History</button>
-            <div id="historyContainer" class="history-list"></div>
-        </div>
+    <h2>Report History</h2>
+    <p>Previously saved audit reports are listed below.</p>
+
+    <button 
+        class="secondary-button"
+        onclick="toggleHistory()"
+        aria-label="Toggle report history visibility"
+    >
+        View Reports
+    </button>
+
+    <div id="historySection" style="display:none;">
+        <div id="historyContainer" class="history-list"></div>
+    </div>
+</div>
+
+    <div class="history">
+    <h2>Help & Information</h2>
+
+    <button 
+        class="secondary-button"
+        onclick="toggleHelp()"
+        aria-label="Toggle help section"
+    >
+        More Info
+    </button>
+
+    <div id="helpSection" style="display:none; margin-top:10px;">
+
+        <p><strong>How to Use:</strong></p>
+        <p>
+            Enter a token smart contract address and click "Evaluate Risk" to generate an audit report.
+        </p>
+
+        <p><strong>Understanding Results:</strong></p>
+        <p>
+            The system calculates a risk score based on ownership, liquidity, distribution,
+            code transparency, and activity indicators.
+        </p>
+
+        <p><strong>Blockchain Logging:</strong></p>
+        <p>
+            When enabled, audit results are recorded on the Ethereum Sepolia test network
+            for transparency and verification.
+        </p>
+
+        <p><strong>Important Notice:</strong></p>
+        <p>
+            This application provides informational risk analysis only and does not constitute
+            financial or investment advice.
+        </p>
+
+        <p><strong>Support:</strong></p>
+        <p>
+            For assistance, contact: support@clearriskaudit.com
+        </p>
+
+    </div>
+</div>
+
+        <div class="footer">
+    <p>
+        Accessibility Notice: If you experience difficulty accessing this application,
+        please contact support@clearriskaudit.com for assistance.
+    </p>
+
+    <p>
+        This application is for educational and informational purposes only.
+        Blockchain data and risk evaluations are not financial advice.
+    </p>
+</div>
     </div>
 
     <script>
@@ -183,26 +277,45 @@
                 }
 
                 messageDiv.innerHTML = `
-                    <div class="result">
-                        <h2>Audit Result</h2>
-                        <p><strong>Audit ID:</strong> ${data.auditId}</p>
-                        <p><strong>Contract Address:</strong> ${data.contractAddress}</p>
-                        <p><strong>Final Score:</strong> ${data.finalScore}</p>
-                        <p><strong>Risk Tier:</strong> ${data.riskTier}</p>
-                        <p><strong>Report Hash:</strong> ${data.reportHash}</p>
-                        <p><strong>Created At:</strong> ${formatDate(data.createdAt)}</p>
-                        <p><strong>Blockchain Logged:</strong> ${data.blockchainLogged}</p>
+    <div class="result">
+        <h2>Audit Result</h2>
 
-                        <h3>Breakdown</h3>
-                        <ul>
-                            <li><strong>Ownership Risk:</strong> ${data.breakdown.ownershipRisk}</li>
-                            <li><strong>Liquidity Risk:</strong> ${data.breakdown.liquidityRisk}</li>
-                            <li><strong>Distribution Risk:</strong> ${data.breakdown.distributionRisk}</li>
-                            <li><strong>Code Transparency Risk:</strong> ${data.breakdown.codeTransparencyRisk}</li>
-                            <li><strong>Activity Risk:</strong> ${data.breakdown.activityRisk}</li>
-                        </ul>
-                    </div>
-                `;
+        <button 
+            class="secondary-button"
+            onclick="toggleResultDetails()"
+            aria-label="Toggle audit result details"
+        >
+            Show / Hide Details
+        </button>
+
+        <div id="resultDetails" style="margin-top:10px;">
+
+            <p><strong>Audit ID:</strong> ${data.auditId}</p>
+            <p><strong>Contract Address:</strong> ${data.contractAddress}</p>
+            <p><strong>Final Score:</strong> ${data.finalScore}</p>
+            <p><strong>Risk Tier:</strong> ${data.riskTier}</p>
+            <p><strong>Report Hash:</strong> ${data.reportHash}</p>
+            <p><strong>Created At:</strong> ${formatDate(data.createdAt)}</p>
+            <p><strong>Blockchain Logged:</strong> ${data.blockchainLogged}</p>
+
+            ${
+                data.transactionHash
+                ? `<p><strong>Transaction Hash:</strong> ${data.transactionHash}</p>`
+                : `<p><strong>Transaction Hash:</strong> Not available</p>`
+            }
+
+            <h3>Breakdown</h3>
+            <ul>
+                <li><strong>Ownership Risk:</strong> ${data.breakdown.ownershipRisk}</li>
+                <li><strong>Liquidity Risk:</strong> ${data.breakdown.liquidityRisk}</li>
+                <li><strong>Distribution Risk:</strong> ${data.breakdown.distributionRisk}</li>
+                <li><strong>Code Transparency Risk:</strong> ${data.breakdown.codeTransparencyRisk}</li>
+                <li><strong>Activity Risk:</strong> ${data.breakdown.activityRisk}</li>
+            </ul>
+
+        </div>
+    </div>
+`;
 
                 await loadReportHistory();
             } catch (error) {
@@ -238,21 +351,78 @@
                 }
 
                 historyContainer.innerHTML = reports.map(report => `
-                    <div class="history-card">
-                        <p><strong>Audit ID:</strong> ${report.id}</p>
-                        <p><strong>Contract Address:</strong> ${report.contractAddress}</p>
-                        <p><strong>Final Score:</strong> ${report.finalScore}</p>
-                        <p><strong>Risk Tier:</strong> ${report.riskTier}</p>
-                        <p><strong>Report Hash:</strong> ${report.reportHash}</p>
-                        <p><strong>Created At:</strong> ${formatDate(report.createdAt)}</p>
-                        <p><strong>Blockchain Logged:</strong> ${report.blockchainLogged}</p>
-                    </div>
-                `).join("");
+    <div class="history-card">
+        <p><strong>Audit ID:</strong> ${report.id}</p>
+        <p><strong>Date:</strong> ${formatDate(report.createdAt)}</p>
+        <p><strong>Contract:</strong> ${report.contractAddress}</p>
+
+        <button 
+            class="secondary-button"
+            onclick="toggleDetails(${report.id})"
+            aria-label="Toggle detailed audit report"
+        >
+            More Details
+        </button>
+
+        <div id="details-${report.id}" style="display:none; margin-top:10px;">
+
+            <p><strong>Final Score:</strong> ${report.finalScore}</p>
+            <p><strong>Risk Tier:</strong> ${report.riskTier}</p>
+            <p><strong>Report Hash:</strong> ${report.reportHash}</p>
+            <p><strong>Blockchain Logged:</strong> ${report.blockchainLogged}</p>
+
+            <p><strong>Ownership Risk:</strong> ${report.ownershipRisk}</p>
+            <p><strong>Liquidity Risk:</strong> ${report.liquidityRisk}</p>
+            <p><strong>Distribution Risk:</strong> ${report.distributionRisk}</p>
+            <p><strong>Code Transparency Risk:</strong> ${report.codeTransparencyRisk}</p>
+            <p><strong>Activity Risk:</strong> ${report.activityRisk}</p>
+
+            ${
+                report.transactionHash
+                ? `<p><strong>Transaction Hash:</strong> ${report.transactionHash}</p>`
+                : `<p><strong>Transaction Hash:</strong> Not available</p>`
+            }
+
+        </div>
+    </div>
+`).join("");
             } catch (error) {
                 historyContainer.innerHTML = `
                     <p class="empty-history">Server connection error while loading report history.</p>
                 `;
             }
+        }
+
+        function toggleResultDetails() {
+    const el = document.getElementById("resultDetails");
+
+    if (!el) return; // safety check
+
+    el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+        function toggleDetails(id) {
+            const el = document.getElementById(`details-${id}`);
+
+            if (!el) return; // safety check
+
+            el.style.display = el.style.display === "none" ? "block" : "none";
+        }
+
+        function toggleHistory() {
+            const el = document.getElementById("historySection");
+
+            if (!el) return;
+
+            el.style.display = el.style.display === "none" ? "block" : "none";
+        }
+
+        function toggleHelp() {
+            const el = document.getElementById("helpSection");
+
+            if (!el) return;
+
+            el.style.display = el.style.display === "none" ? "block" : "none";
         }
 
         function formatDate(dateValue) {
