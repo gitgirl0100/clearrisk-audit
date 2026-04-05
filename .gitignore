@@ -47,3 +47,11 @@ Coverage / Testing
 
 coverage/
 TestResults/
+
+=========================
+SQLite Database Files
+=========================
+
+*.db
+*.db-shm
+*.db-wal

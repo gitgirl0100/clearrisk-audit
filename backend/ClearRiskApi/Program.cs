@@ -10,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<RiskScoringService>();
 builder.Services.AddHttpClient<BlockchainValidationService>();
+builder.Services.AddScoped<BlockchainLoggingService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=clearrisk.db"));
@@ -77,25 +78,25 @@ app.MapPost("/api/evaluate", async (
     EvaluateRequest request,
     RiskScoringService scoringService,
     BlockchainValidationService blockchainValidationService,
+    BlockchainLoggingService blockchainLoggingService,
     AppDbContext db) =>
 {
+    // Validate address
     if (!IsValidEthereumAddress(request.ContractAddress, out var validationError))
     {
-        return Results.BadRequest(new
-        {
-            error = validationError
-        });
+        return Results.BadRequest(new { error = validationError });
     }
 
+    // Validate contract exists on blockchain
     var blockchainValidation = await blockchainValidationService
         .ValidateContractExistsAsync(request.ContractAddress);
 
     if (!blockchainValidation.IsSuccess)
     {
-    return Results.Json(new
-    {
-        error = blockchainValidation.ErrorMessage ?? "Blockchain validation service is unavailable."
-    }, statusCode: StatusCodes.Status503ServiceUnavailable);
+        return Results.Json(new
+        {
+            error = blockchainValidation.ErrorMessage ?? "Blockchain validation service is unavailable."
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
     if (!blockchainValidation.ContractExists)
@@ -106,8 +107,10 @@ app.MapPost("/api/evaluate", async (
         });
     }
 
+    // Run scoring
     var result = scoringService.Evaluate(request.ContractAddress);
 
+    // Create audit report
     var auditReport = new AuditReport
     {
         ContractAddress = request.ContractAddress,
@@ -124,9 +127,37 @@ app.MapPost("/api/evaluate", async (
         TransactionHash = null
     };
 
+    // Save to database FIRST
     db.AuditReports.Add(auditReport);
     await db.SaveChangesAsync();
 
+    // 🔗 Blockchain logging
+    try
+    {
+        Console.WriteLine("Logging to blockchain...");
+
+        var txnHash = await blockchainLoggingService.LogAuditAsync(
+    auditReport.ContractAddress,
+    (int)Math.Round(auditReport.FinalScore),
+    auditReport.RiskTier,
+    auditReport.ReportHash
+);
+
+        Console.WriteLine($"Transaction sent: {txnHash}");
+
+        auditReport.TransactionHash = txnHash;
+        auditReport.BlockchainLogged = true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Blockchain error: {ex.Message}");
+        auditReport.BlockchainLogged = false;
+    }
+
+    // Save updated blockchain result
+    await db.SaveChangesAsync();
+
+    // RETURN RESPONSE (THIS WAS YOUR MISSING PIECE)
     return Results.Ok(new
     {
         auditId = auditReport.Id,
@@ -141,6 +172,7 @@ app.MapPost("/api/evaluate", async (
     });
 });
 
+// GET all reports
 app.MapGet("/api/reports", async (AppDbContext db) =>
 {
     var reports = await db.AuditReports
@@ -150,6 +182,7 @@ app.MapGet("/api/reports", async (AppDbContext db) =>
     return Results.Ok(reports);
 });
 
+// GET report by ID
 app.MapGet("/api/reports/{id:int}", async (int id, AppDbContext db) =>
 {
     var report = await db.AuditReports.FindAsync(id);
